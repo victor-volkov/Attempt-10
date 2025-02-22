@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold">AI Comments Management</h1>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statistics</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AI Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Persona</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for account in accounts %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ account.account_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500">
+                            <span>Today: {{ account.stats.today }}</span>
+                            <span class="mx-2">|</span>
+                            <span>Total: {{ account.stats.total }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" 
+                                   class="sr-only" 
+                                   onchange="toggleAI('{{ account.id }}', this)"
+                                   {{ 'checked' if account.ai_enabled else '' }}>
+                            <div class="toggle-switch relative w-12 h-6 flex items-center justify-start">
+                                <div class="toggle-bg absolute inset-0 rounded-full bg-gray-300 transition-colors duration-300 ease-in-out"></div>
+                                <div class="toggle-dot absolute left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out"></div>
+                            </div>
+                            <span class="status-text ml-3 text-sm font-medium text-gray-500">
+                                {{ 'Active' if account.ai_enabled else 'Inactive' }}
+                            </span>
+                        </label>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if account.selected_persona %}
+                            <div class="flex items-center space-x-3">
+                                <div>
+                                    <span class="text-sm text-gray-900">{{ account.selected_persona.name }}</span>
+                                    {% if account.selected_persona.custom_prompt %}
+                                        <p class="text-xs text-gray-500">{{ account.selected_persona.custom_prompt }}</p>
+                                    {% endif %}
+                                </div>
+                                <button onclick="openPersonaModal('{{ account.id }}')" 
+                                        class="text-blue-600 hover:text-blue-800 text-sm">
+                                    Change
+                                </button>
+                            </div>
+                        {% else %}
+                            <button onclick="openPersonaModal('{{ account.id }}')"
+                                    class="text-blue-600 hover:text-blue-800 text-sm">
+                                Select Persona
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Persona Selection Modal -->
+    <div id="personaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+        <div class="min-h-screen px-4 text-center flex items-center justify-center">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto">
+                <div class="flex flex-col max-h-[80vh]">
+                    <!-- Header -->
+                    <div class="p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xl font-semibold text-gray-900">Select Persona</h3>
+                            <button onclick="closePersonaModal()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Content -->
+                    <div class="p-6 overflow-y-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for persona in personas %}
+                            <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                                 onclick="selectPersona('{{ persona.id }}')">
+                                <div class="space-y-3">
+                                    <h4 class="font-medium text-gray-900">{{ persona.name }}</h4>
+                                    
+                                    <!-- Settings -->
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if persona.style %}
+                                            <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                <i class="fas fa-pen-fancy mr-1"></i>
+                                                {{ persona.style }}
+                                            </span>
+                                        {% endif %}
+                                        {% if persona.length %}
+                                            <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                <i class="fas fa-text-width mr-1"></i>
+                                                {{ persona.length }}
+                                            </span>
+                                        {% endif %}
+                                        {% if persona.use_emoji %}
+                                            <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                <i class="far fa-smile mr-1"></i>
+                                            </span>
+                                        {% endif %}
+                                        {% if persona.use_hashtags %}
+                                            <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                <i class="fas fa-hashtag mr-1"></i>
+                                            </span>
+                                        {% endif %}
+                                        {% if persona.mention_user %}
+                                            <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                <i class="fas fa-at mr-1"></i>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Custom Prompt with Expand/Collapse -->
+                                    {% if persona.custom_prompt %}
+                                        <div class="pt-2 border-t">
+                                            <div class="relative text-left">
+                                                <p class="text-sm text-gray-600 prompt-text" 
+                                                   id="prompt-{{ persona.id }}"
+                                                   data-expanded="false"
+                                                   data-short-text="{{ persona.custom_prompt[:110] + '...' if persona.custom_prompt|length > 110 else persona.custom_prompt }}">
+                                                    {{ persona.custom_prompt[:110] + '...' if persona.custom_prompt|length > 110 else persona.custom_prompt }}
+                                                </p>
+                                                {% if persona.custom_prompt|length > 110 %}
+                                                    <button onclick="togglePrompt(event, '{{ persona.id }}')" 
+                                                            class="absolute bottom-0 right-0 text-gray-400 hover:text-gray-600 bg-white px-1">
+                                                        <i class="fas fa-chevron-down text-xs"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="p-6 border-t">
+                        <div class="flex justify-end">
+                            <button onclick="openAddPersonaModal()" 
+                                    class="text-blue-600 hover:text-blue-800 font-medium">
+                                + Create New Persona
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function togglePrompt(event, personaId) {
+        event.stopPropagation(); // Prevent card click
+        const promptContainer = event.target.closest('.relative');
+        const promptText = promptContainer.querySelector('.prompt-text');
+        const button = event.target.closest('button');
+        const isExpanded = promptText.dataset.expanded === 'true';
+        
+        if (!isExpanded) {
+            fetch(`/api/get_full_prompt/${personaId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        promptText.textContent = data.custom_prompt;
+                        promptText.dataset.expanded = 'true';
+                        button.innerHTML = '<i class="fas fa-chevron-up text-xs"></i>';
+                        // Store original text for collapsing
+                        promptText.dataset.shortText = promptText.dataset.shortText || promptText.textContent.substring(0, 110) + '...';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching full prompt:', error);
+                });
+        } else {
+            // Collapse
+            promptText.textContent = promptText.dataset.shortText;
+            promptText.dataset.expanded = 'false';
+            button.innerHTML = '<i class="fas fa-chevron-down text-xs"></i>';
+        }
+    }
+
+    async function toggleAI(accountId, element) {
+        console.log('Toggle called for account:', accountId); // Debug log
+        
+        const label = element.closest('label');
+        const toggleBg = label.querySelector('.toggle-bg');
+        const toggleDot = label.querySelector('.toggle-dot');
+        const statusText = label.querySelector('.status-text');
+        const isChecked = element.checked;
+
+        console.log('Current state:', isChecked); // Debug log
+
+        try {
+            const response = await fetch('/api/toggle_ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ account_id: accountId, enabled: isChecked })
+            });
+            
+            const data = await response.json();
+            console.log('API response:', data); // Debug log
+
+            if (response.ok && data.success) {
+                // Update UI
+                if (isChecked) {
+                    toggleBg.style.backgroundColor = '#2563eb'; // blue-600
+                    toggleDot.style.transform = 'translateX(24px)';
+                    statusText.textContent = 'Active';
+                    statusText.style.color = '#2563eb';
+                } else {
+                    toggleBg.style.backgroundColor = '#d1d5db'; // gray-300
+                    toggleDot.style.transform = 'translateX(0)';
+                    statusText.textContent = 'Inactive';
+                    statusText.style.color = '#6b7280';
+                }
+            } else {
+                throw new Error('Failed to update AI status');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            // Revert checkbox state
+            element.checked = !isChecked;
+            alert('Failed to update AI status. Please try again.');
+        }
+    }
+
+    function openPersonaModal(accountId) {
+        document.getElementById('personaModal').dataset.accountId = accountId;
+        document.getElementById('personaModal').classList.remove('hidden');
+    }
+
+    function closePersonaModal() {
+        document.getElementById('personaModal').classList.add('hidden');
+    }
+
+    async function selectPersona(personaId) {
+        const modal = document.getElementById('personaModal');
+        const accountId = modal.dataset.accountId;
+        
+        try {
+            const response = await fetch('/api/select_persona', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ account_id: accountId, persona_id: personaId })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            
+            const data = await response.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                throw new Error('Failed to update persona');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to update persona. Please try again.');
+        }
+    }
+
+    function openAddPersonaModal() {
+        window.location.href = "{{ url_for('manage_personas') }}?action=new";
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('personaModal');
+        if (e.target === modal) {
+            closePersonaModal();
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Comment History</h1>
+        <button onclick="exportComments()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+            <i class="fas fa-download mr-2"></i>Export Comments
+        </button>
+    </div>
+
+    <!-- Account Filter -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-8">
+        <form class="flex items-center space-x-4">
+            <label class="font-medium">Filter by Account:</label>
+            <select name="account_id" onchange="this.form.submit()" 
+                    class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="">All Accounts</option>
+                {% for account in accounts %}
+                    <option value="{{ account.id }}" 
+                            {{ 'selected' if request.args.get('account_id')|int == account.id }}>
+                        {{ account.account_name }}
+                        {% if account.is_active %}(Active){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Comments List -->
+    {% if comments %}
+        {% for comment in comments %}
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <!-- Original Tweet -->
+                <div class="border-b pb-4 mb-4">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="font-bold">{{ comment.tweet_author }}</span>
+                        <a href="{{ comment.tweet_url }}" target="_blank" 
+                           class="text-blue-600 hover:text-blue-800">
+                            View Original Tweet
+                        </a>
+                    </div>
+                    <p class="text-gray-800 whitespace-pre-line">{{ comment.tweet_text }}</p>
+                </div>
+
+                <!-- Our Comment -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium">Our Reply</span>
+                            <span class="text-sm text-gray-500">
+                                from {{ comment.account_name }}
+                            </span>
+                        </div>
+                        {% if comment.comment_url %}
+                            <a href="{{ comment.comment_url }}" target="_blank"
+                               class="text-blue-600 hover:text-blue-800">
+                                View Reply on Twitter
+                            </a>
+                        {% endif %}
+                    </div>
+                    <p class="text-gray-800">{{ comment.comment_text }}</p>
+                    <p class="text-sm text-gray-500">
+                        Posted on {{ comment.posted_at }}
+                    </p>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+            No comments found.
+            {% if request.args.get('account_id') %}
+                Try selecting a different account or view all accounts.
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function exportComments() {
+    const accountId = new URLSearchParams(window.location.search).get('account_id');
+    window.location.href = `/export-comments${accountId ? `?account_id=${accountId}` : ''}`;
+}
+</script>
+{% endblock %} 

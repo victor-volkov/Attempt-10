@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Direct Messages</h1>
+        <button class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>New Campaign
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Campaign Manager -->
+        <div class="card development-card">
+            <i class="fas fa-bullhorn development-icon"></i>
+            <h3 class="text-xl font-semibold">Campaign Manager</h3>
+            <p class="text-gray-400">Create and manage automated DM campaigns</p>
+            <div class="grid grid-cols-3 gap-4 mt-4">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-500">∞</div>
+                    <div class="text-gray-400 text-sm mt-1">Campaigns</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-500">Smart</div>
+                    <div class="text-gray-400 text-sm mt-1">Targeting</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-500">AI</div>
+                    <div class="text-gray-400 text-sm mt-1">Templates</div>
+                </div>
+            </div>
+            <span class="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm mt-6">Coming Soon</span>
+        </div>
+
+        <!-- Message Templates -->
+        <div class="card development-card">
+            <i class="fas fa-envelope-open-text development-icon"></i>
+            <h3 class="text-xl font-semibold">Message Templates</h3>
+            <p class="text-gray-400">Create and manage personalized message templates</p>
+            <div class="flex items-center justify-center space-x-4 mt-4">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-500">Dynamic</div>
+                    <div class="text-gray-400 text-sm mt-1">Variables</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-500">A/B</div>
+                    <div class="text-gray-400 text-sm mt-1">Testing</div>
+                </div>
+            </div>
+            <span class="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm mt-6">Coming Soon</span>
+        </div>
+    </div>
+
+    <!-- Features Preview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <div class="card p-4 text-center">
+            <i class="fas fa-user-check text-3xl text-indigo-500 mb-3"></i>
+            <h4 class="font-semibold">Smart Targeting</h4>
+            <p class="text-sm text-gray-400 mt-2">Target users based on engagement, interests, and behavior</p>
+        </div>
+        <div class="card p-4 text-center">
+            <i class="fas fa-chart-line text-3xl text-indigo-500 mb-3"></i>
+            <h4 class="font-semibold">Performance Analytics</h4>
+            <p class="text-sm text-gray-400 mt-2">Track open rates, responses, and campaign success</p>
+        </div>
+        <div class="card p-4 text-center">
+            <i class="fas fa-shield-alt text-3xl text-indigo-500 mb-3"></i>
+            <h4 class="font-semibold">Rate Limiting</h4>
+            <p class="text-sm text-gray-400 mt-2">Stay within Twitter's DM limits automatically</p>
+        </div>
+    </div>
+</div>
+{% endblock %} 

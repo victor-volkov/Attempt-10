@@ -1,0 +1,714 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+    .tweet-card {
+        transition: all 0.3s ease;
+    }
+    .tweet-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .sort-btn {
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    .sort-btn.active {
+        background-color: #EBF5FF;
+        color: #2563EB;
+    }
+    .sort-arrow::after {
+        content: '⇅';
+        opacity: 0.5;
+        margin-left: 4px;
+    }
+    .sort-btn.active .sort-arrow::after {
+        content: '↑';
+        opacity: 1;
+    }
+    .sort-btn.active.desc .sort-arrow::after {
+        content: '↓';
+    }
+    /* Add styles for account dropdown */
+    #accountDropdown {
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    #accountDropdown button {
+        color: #1f2937; /* text-gray-800 for better contrast */
+    }
+    
+    #accountDropdown button:hover {
+        background-color: #f3f4f6;
+    }
+    
+    #accountDropdown button.active {
+        background-color: #ebf5ff;
+    }
+    
+    #accountDropdown .text-gray-500 {
+        color: #4b5563; /* text-gray-600 for better contrast */
+    }
+
+    /* Add placeholder styles for better contrast */
+    ::placeholder {
+        color: #6b7280 !important; /* text-gray-600 */
+        opacity: 1 !important;
+    }
+    
+    :-ms-input-placeholder {
+        color: #6b7280 !important;
+    }
+    
+    ::-ms-input-placeholder {
+        color: #6b7280 !important;
+    }
+
+    /* Update input text color for better contrast */
+    input, select {
+        color: #1f2937 !important; /* text-gray-800 */
+    }
+
+    /* Update sort button styles */
+    .sort-btn {
+        color: #374151; /* text-gray-700 */
+        transition: all 0.2s ease;
+    }
+    
+    .sort-btn:hover {
+        background-color: #f3f4f6;
+        color: #1f2937; /* text-gray-800 */
+    }
+    
+    .sort-btn.active {
+        background-color: #ebf5ff;
+        color: #2563eb; /* blue-600 */
+    }
+
+    /* Update tweet card styles */
+    .tweet-card {
+        transition: all 0.3s ease;
+    }
+
+    .tweet-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .tweet-card .author-name {
+        color: #1f2937; /* text-gray-800 */
+        font-weight: 600;
+    }
+
+    .tweet-card .username {
+        color: #4b5563; /* text-gray-600 */
+    }
+
+    .tweet-card .tweet-text {
+        color: #374151; /* text-gray-700 */
+    }
+
+    .tweet-card .tweet-stats {
+        color: #4b5563; /* text-gray-600 */
+    }
+
+    .tweet-card .quality-score {
+        font-weight: 500;
+    }
+
+    .tweet-card .quality-reason {
+        color: #4b5563; /* text-gray-600 */
+    }
+
+    .tweet-card .timestamp {
+        color: #6b7280; /* text-gray-500 */
+    }
+
+    /* Add textarea specific styles */
+    textarea {
+        color: #111827 !important; /* text-gray-900 */
+    }
+    
+    textarea:disabled {
+        color: #111827 !important; /* Keep text dark even when disabled */
+        background-color: #f9fafb !important; /* gray-50 */
+        opacity: 1 !important;
+    }
+
+    textarea::placeholder {
+        color: #6b7280 !important; /* text-gray-600 */
+        opacity: 1 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold">Manual Comments</h1>
+    </div>
+
+    <!-- Single Container for All Content -->
+    <div class="bg-white rounded-lg shadow-md">
+        <!-- Header Section -->
+        <div class="border-b border-gray-200">
+            <div class="grid grid-cols-3 divide-x divide-gray-200">
+                <div class="px-6 py-4">
+                    <div class="text-xs font-medium text-gray-700 uppercase mb-2">Account</div>
+                    <div class="flex items-center space-x-2">
+                        {% if active_account %}
+                            <span class="font-medium text-gray-900">{{ active_account.account_name }}</span>
+                            <button onclick="toggleAccountDropdown(event)" 
+                                    class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+                            <!-- Account Switcher Dropdown -->
+                            <div id="accountDropdown" 
+                                 class="hidden absolute mt-2 w-72 bg-white rounded-lg shadow-lg z-50 py-2">
+                                {% for account in accounts %}
+                                    <form action="{{ url_for('switch_account', account_id=account.id) }}" 
+                                          method="post" 
+                                          class="block">
+                                        <button type="submit" 
+                                                class="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between {% if account.is_active %}bg-blue-50{% endif %}">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="font-medium text-gray-900">{{ account.account_name }}</span>
+                                                {% if account.is_active %}
+                                                    <i class="fas fa-check text-blue-600 text-sm"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-sm text-gray-600">
+                                                <span class="mr-2">Today: {{ account.comment_counts.today }}</span>
+                                                <span>Total: {{ account.comment_counts.total }}</span>
+                                            </div>
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-red-500">No active account</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="text-xs font-medium text-gray-700 uppercase mb-2">Statistics</div>
+                    <div class="text-sm text-gray-700">
+                        <span>Today: {{ comments_count.today }}</span>
+                        <span class="mx-2">|</span>
+                        <span>Total: {{ comments_count.total }}</span>
+                    </div>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="text-xs font-medium text-gray-700 uppercase mb-2">Actions</div>
+                    <!-- Add actions if needed -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form Section -->
+        <div class="p-6 border-b border-gray-200">
+            <form id="searchForm" class="space-y-4">
+                <!-- Search Terms -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Search Terms (Required)</label>
+                    <div id="searchTermsContainer" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="text" 
+                                   class="search-term mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                   placeholder="Enter search term"
+                                   required>
+                            <button type="button" onclick="addSearchTerm()" class="mt-1 bg-blue-500 text-white px-3 rounded-md hover:bg-blue-600">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Max Items -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Max Items (Optional)</label>
+                        <input type="number" id="maxItems" value="100" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Location -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Location (Optional)</label>
+                        <input type="text" 
+                               id="geotaggedNear" 
+                               placeholder="e.g., New York" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <!-- Minimum Metrics -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Min Retweets (Optional)</label>
+                        <input type="number" id="minimumRetweets" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Min Replies (Optional)</label>
+                        <input type="number" id="minimumReplies" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Min Likes (Optional)</label>
+                        <input type="number" id="minimumLikes" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Start Date (Optional)</label>
+                        <input type="date" 
+                               id="start" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="DD.MM.YYYY">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">End Date (Optional)</label>
+                        <input type="date" 
+                               id="end" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="DD.MM.YYYY">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Search Tweets
+                </button>
+            </form>
+        </div>
+
+        <!-- Sorting Controls Section -->
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="text-gray-900 font-medium">Sort by:</div>
+                <div class="flex space-x-4">
+                    <button onclick="sortTweets('quality')" class="sort-btn px-4 py-2 rounded-md hover:bg-gray-100 flex items-center space-x-1 text-gray-700" data-sort="quality">
+                        <span>Quality Score</span>
+                        <span class="sort-arrow"></span>
+                    </button>
+                    <button onclick="sortTweets('likeCount')" class="sort-btn px-4 py-2 rounded-md hover:bg-gray-100 flex items-center space-x-1 text-gray-700" data-sort="likeCount">
+                        <span>Likes</span>
+                        <span class="sort-arrow"></span>
+                    </button>
+                    <button onclick="sortTweets('replyCount')" class="sort-btn px-4 py-2 rounded-md hover:bg-gray-100 flex items-center space-x-1 text-gray-700" data-sort="replyCount">
+                        <span>Comments</span>
+                        <span class="sort-arrow"></span>
+                    </button>
+                    <button onclick="sortTweets('retweetCount')" class="sort-btn px-4 py-2 rounded-md hover:bg-gray-100 flex items-center space-x-1 text-gray-700" data-sort="retweetCount">
+                        <span>Reposts</span>
+                        <span class="sort-arrow"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="p-6">
+            <div id="results" class="space-y-4">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentTweets = [];
+    let currentSortField = null;
+    let isAscending = true;
+
+    // Initialize account dropdown functionality
+    function toggleAccountDropdown(event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        const dropdown = document.getElementById('accountDropdown');
+        dropdown.classList.toggle('hidden');
+        
+        // Close dropdown when clicking outside
+        if (!dropdown.classList.contains('hidden')) {
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown(e) {
+                    const button = document.querySelector('button[onclick="toggleAccountDropdown(event)"]');
+                    if (!dropdown.contains(e.target) && 
+                        !button.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }, 0);
+        }
+    }
+
+    // Initialize event listeners
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('results').innerHTML = '<div class="text-center text-gray-500 py-8">Enter search terms and click "Search Tweets" to begin.</div>';
+    });
+
+    function sortTweets(field) {
+        // Toggle sort direction if clicking the same field
+        if (currentSortField === field) {
+            isAscending = !isAscending;
+        } else {
+            currentSortField = field;
+            isAscending = true;
+        }
+
+        // Update button styles
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.classList.remove('active', 'desc');
+            if (btn.dataset.sort === field) {
+                btn.classList.add('active');
+                if (!isAscending) {
+                    btn.classList.add('desc');
+                }
+            }
+        });
+
+        // Sort the tweets
+        currentTweets.sort((a, b) => {
+            let valueA, valueB;
+            
+            if (field === 'quality') {
+                valueA = a.quality ? a.quality.score : 0;
+                valueB = b.quality ? b.quality.score : 0;
+            } else {
+                valueA = a[field] || 0;
+                valueB = b[field] || 0;
+            }
+
+            if (isAscending) {
+                return valueA - valueB;
+            } else {
+                return valueB - valueA;
+            }
+        });
+
+        displayTweets(currentTweets);
+    }
+
+    function addSearchTerm() {
+        const container = document.getElementById('searchTermsContainer');
+        const div = document.createElement('div');
+        div.className = 'flex gap-2';
+        div.innerHTML = `
+            <input type="text" class="search-term mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+            <button type="button" onclick="this.parentElement.remove()" class="mt-1 bg-red-500 text-white px-3 rounded-md hover:bg-red-600">
+                ×
+            </button>
+        `;
+        container.appendChild(div);
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Show loading state
+        const resultsContainer = document.getElementById('results');
+        resultsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">Searching tweets...</div>';
+        
+        // Collect all search terms
+        const searchTerms = Array.from(document.querySelectorAll('.search-term'))
+            .map(input => input.value.trim())
+            .filter(term => term !== '');
+
+        if (searchTerms.length === 0) {
+            resultsContainer.innerHTML = '<div class="text-center text-red-500 py-8">Please enter at least one search term.</div>';
+            return;
+        }
+
+        const searchData = {
+            searchTerms: searchTerms,
+            maxItems: parseInt(document.getElementById('maxItems').value) || 50,
+            minimumRetweets: parseInt(document.getElementById('minimumRetweets').value) || 0,
+            minimumReplies: parseInt(document.getElementById('minimumReplies').value) || 0,
+            minimumLikes: parseInt(document.getElementById('minimumLikes').value) || 0,
+            geotaggedNear: document.getElementById('geotaggedNear').value || null,
+            start: document.getElementById('start').value || null,
+            end: document.getElementById('end').value || null
+        };
+
+        console.log('Sending search request with data:', searchData);
+
+        try {
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(searchData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Received search response:', data);
+
+            if (data.error) {
+                resultsContainer.innerHTML = `<div class="text-center text-red-500 py-8">Error: ${data.error}</div>`;
+                return;
+            }
+
+            currentTweets = data;
+            
+            // Re-apply current sort if exists
+            if (currentSortField) {
+                sortTweets(currentSortField);
+            } else {
+                displayTweets(currentTweets);
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            resultsContainer.innerHTML = `<div class="text-center text-red-500 py-8">Error searching tweets: ${error.message}</div>`;
+        }
+    });
+
+    function getQualityColor(score) {
+        switch (score) {
+            case 1:
+                return 'bg-red-500';
+            case 2:
+                return 'bg-orange-500';
+            case 3:
+                return 'bg-yellow-500';
+            case 4:
+                return 'bg-green-500';
+            case 5:
+                return 'bg-blue-500';
+            default:
+                return 'bg-gray-500';
+        }
+    }
+
+    function displayTweets(tweets) {
+        const resultsContainer = document.getElementById('results');
+        resultsContainer.innerHTML = '';
+
+        if (tweets.length === 0) {
+            resultsContainer.innerHTML = '<div class="text-center text-gray-700 py-8">No tweets found matching your criteria.</div>';
+            return;
+        }
+
+        // Add sort indicator if sorting is active
+        if (currentSortField) {
+            const sortIndicator = document.createElement('div');
+            sortIndicator.className = 'mb-4 text-sm text-gray-700 flex items-center';
+            const fieldNames = {
+                'quality': 'Quality Score',
+                'likeCount': 'Likes',
+                'replyCount': 'Comments',
+                'retweetCount': 'Reposts'
+            };
+            sortIndicator.innerHTML = `
+                <span class="font-medium">Current sort:</span>
+                <span class="ml-2">${fieldNames[currentSortField]}</span>
+                <span class="ml-2 text-blue-600">${isAscending ? '↑' : '↓'}</span>
+            `;
+            resultsContainer.appendChild(sortIndicator);
+        }
+
+        tweets.forEach(tweet => {
+            const tweetCard = document.createElement('div');
+            tweetCard.className = 'tweet-card bg-white rounded-lg shadow-md p-6';
+            
+            // Handle media display
+            let mediaHtml = '';
+            if (tweet.extendedEntities && tweet.extendedEntities.media) {
+                const media = tweet.extendedEntities.media[0];
+                if (media.type === 'video') {
+                    // Get the highest quality video variant
+                    const videoVariant = media.video_info.variants
+                        .filter(v => v.content_type === 'video/mp4')
+                        .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+                        
+                    if (videoVariant) {
+                        mediaHtml = `
+                            <div class="mt-2">
+                                <video controls class="max-w-[300px] h-auto rounded-lg mx-auto">
+                                    <source src="${videoVariant.url}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>`;
+                    }
+                } else if (media.type === 'photo') {
+                    mediaHtml = `
+                        <div class="mt-2">
+                            <img src="${media.media_url_https}" class="max-w-[300px] h-auto rounded-lg object-contain mx-auto" alt="Tweet media">
+                        </div>`;
+                }
+            }
+
+            // Handle verification badge
+            const verificationBadge = tweet.author.isVerified ? 
+                `<span class="text-blue-500 ml-1" title="${tweet.author.verifiedType || 'Verified'}">✓</span>` : '';
+
+            tweetCard.innerHTML = `
+                <div class="flex items-start space-x-4">
+                    <img src="${tweet.author.profilePicture}" class="w-12 h-12 rounded-full">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-gray-900">${tweet.author.name}</span>
+                            <span class="text-gray-600">@${tweet.author.userName}</span>
+                            ${verificationBadge}
+                        </div>
+                        <p class="mt-2 whitespace-pre-line text-gray-900">${tweet.text}</p>
+                        ${mediaHtml}
+                        <div class="flex items-center space-x-6 mt-4 text-gray-600 text-sm">
+                            <span title="Replies">💬 ${tweet.replyCount.toLocaleString()}</span>
+                            <span title="Retweets">🔄 ${tweet.retweetCount.toLocaleString()}</span>
+                            <span title="Likes">❤️ ${tweet.likeCount.toLocaleString()}</span>
+                            <span title="Bookmarks">📑 ${tweet.bookmarkCount.toLocaleString()}</span>
+                        </div>
+                        ${tweet.quality ? `
+                        <div class="mt-2 flex items-center">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium text-gray-900">Quality Score:</span>
+                                <span class="px-2 py-1 rounded-full text-white text-sm font-medium ${getQualityColor(tweet.quality.score)}">
+                                    ${tweet.quality.score}/5
+                                </span>
+                            </div>
+                            <div class="ml-4 text-sm text-gray-700">
+                                ${tweet.quality.reason}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- Update the comment section in the displayTweets function -->
+                        <div class="mt-4 space-y-4">
+                            <!-- Initial Generate Button -->
+                            <button onclick="generateComment('${tweet.id}', '${tweet.text.replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0').replace(/\n/g, '\\n')}', '${tweet.author.userName}')" 
+                                    class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    id="generate-btn-${tweet.id}">
+                                Generate comment
+                            </button>
+                            <div id="comment-${tweet.id}" class="hidden">
+                                <textarea class="w-full p-3 bg-white rounded-lg border border-gray-300 mb-2 min-h-[100px] text-gray-900 disabled:text-gray-900 disabled:bg-gray-50 placeholder-gray-600"></textarea>
+                                <div class="flex space-x-2">
+                                    <button onclick="postComment('${tweet.id}')"
+                                            class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                        Post Comment
+                                    </button>
+                                    <button onclick="generateComment('${tweet.id}', '${tweet.text.replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0').replace(/\n/g, '\\n')}', '${tweet.author.userName}')"
+                                            class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                                        Regenerate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 text-sm text-gray-600">
+                            ${new Date(tweet.createdAt).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultsContainer.appendChild(tweetCard);
+        });
+    }
+
+    async function generateComment(tweetId, tweetText, username) {
+        const commentDiv = document.getElementById(`comment-${tweetId}`);
+        const commentTextarea = commentDiv.querySelector('textarea');
+        const generateBtn = document.getElementById(`generate-btn-${tweetId}`);
+        
+        try {
+            commentDiv.classList.remove('hidden');
+            generateBtn.classList.add('hidden'); // Hide the initial Generate Comment button
+            commentTextarea.value = 'Generating comment...';
+            commentTextarea.disabled = true;
+            
+            // Debug logging
+            console.log('Raw tweet text:', tweetText);
+            console.log('Username:', username);
+            
+            const response = await fetch('/generate-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    tweet_text: tweetText,
+                    username: username
+                })
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Server response:', data);
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            commentTextarea.value = data.comment;
+            commentTextarea.disabled = false;
+        } catch (error) {
+            console.error('Error generating comment:', error);
+            commentTextarea.value = 'Error generating comment. Please try again.';
+            commentTextarea.disabled = false;
+        }
+    }
+
+    async function postComment(tweetId) {
+        const commentDiv = document.getElementById(`comment-${tweetId}`);
+        const comment = commentDiv.querySelector('textarea').value;
+        const tweetCard = commentDiv.closest('.tweet-card');
+        const tweetText = tweetCard.querySelector('p').textContent;
+        const authorName = tweetCard.querySelector('.font-bold').textContent;
+        
+        // Get tweet URL from the tweet ID since we don't have a direct link in the card
+        const tweetUrl = `https://twitter.com/i/web/status/${tweetId}`;
+        
+        try {
+            console.log('Posting comment:', {
+                tweet_id: tweetId,
+                comment: comment,
+                tweet_text: tweetText,
+                tweet_author: authorName,
+                tweet_url: tweetUrl
+            });
+
+            const response = await fetch('/post-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tweet_id: tweetId,
+                    comment: comment,
+                    tweet_text: tweetText,
+                    tweet_author: authorName,
+                    tweet_url: tweetUrl
+                })
+            });
+
+            console.log('Response status:', response.status);
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                alert('Comment posted successfully! View it in the Comment History.');
+                commentDiv.classList.add('hidden');
+            } else {
+                alert('Error posting comment: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            alert('Error posting comment: ' + error.message);
+        }
+    }
+</script>
+{% endblock %} 

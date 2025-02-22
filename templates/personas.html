@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold">Manage Personas</h1>
+        <button onclick="showCreatePersonaModal()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Create New Persona
+        </button>
+    </div>
+
+    <!-- Personas List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for persona in personas %}
+        <div class="bg-white rounded-lg shadow-md p-6" id="persona-{{ persona.id }}">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-xl font-semibold">{{ persona.name }}</h2>
+                <div class="flex space-x-2">
+                    <button onclick="editPersona('{{ persona.id }}')" class="text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deletePersona('{{ persona.id }}')" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-4">{{ persona.description }}</p>
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Style:</span>
+                    <span class="font-medium">{{ persona.style }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Length:</span>
+                    <span class="font-medium">{{ persona.length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Speech:</span>
+                    <span class="font-medium">{{ persona.speech_settings }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Emoji:</span>
+                    <span class="font-medium">{{ 'Yes' if persona.use_emoji else 'No' }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Hashtags:</span>
+                    <span class="font-medium">{{ 'Yes' if persona.use_hashtags else 'No' }}</span>
+                </div>
+                {% if persona.custom_prompt %}
+                <div class="mt-4">
+                    <span class="text-gray-600">Custom Instructions:</span>
+                    <p class="mt-1 text-sm">{{ persona.custom_prompt }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Create/Edit Persona Modal -->
+    <div id="personaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modalTitle">Create New Persona</h3>
+                <form id="personaForm" class="space-y-4">
+                    <input type="hidden" id="personaId" value="">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="personaName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea id="personaDescription" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Style</label>
+                        <select id="personaStyle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="official">Official</option>
+                            <option value="casual">Casual</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="ironic">Ironic</option>
+                            <option value="sarcastic">Sarcastic</option>
+                            <option value="gen-z">Gen-Z</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Length</label>
+                        <select id="personaLength" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="short">Short</option>
+                            <option value="medium">Medium</option>
+                            <option value="long">Long</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Speech Settings</label>
+                        <select id="personaSpeech" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="text">Text Only</option>
+                            <option value="text with a question">Text with Question</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="personaEmoji" class="rounded border-gray-300 text-blue-600">
+                            <label class="ml-2 text-sm text-gray-700">Use Emoji</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="personaHashtags" class="rounded border-gray-300 text-blue-600">
+                            <label class="ml-2 text-sm text-gray-700">Use Hashtags</label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="personaMentionUser" class="rounded border-gray-300 text-blue-600">
+                        <label class="ml-2 text-sm text-gray-700">Mention User</label>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Custom Instructions</label>
+                        <textarea id="personaPrompt" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closePersonaModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPersona = null;
+
+function showCreatePersonaModal() {
+    document.getElementById('modalTitle').textContent = 'Create New Persona';
+    document.getElementById('personaId').value = '';
+    document.getElementById('personaForm').reset();
+    document.getElementById('personaModal').classList.remove('hidden');
+}
+
+function closePersonaModal() {
+    document.getElementById('personaModal').classList.add('hidden');
+    currentPersona = null;
+}
+
+function editPersona(personaId) {
+    fetch(`/personas/${personaId}`)
+        .then(response => response.json())
+        .then(persona => {
+            currentPersona = persona;
+            document.getElementById('modalTitle').textContent = 'Edit Persona';
+            document.getElementById('personaId').value = persona.id;
+            document.getElementById('personaName').value = persona.name;
+            document.getElementById('personaDescription').value = persona.description;
+            document.getElementById('personaStyle').value = persona.style;
+            document.getElementById('personaLength').value = persona.length;
+            document.getElementById('personaSpeech').value = persona.speech_settings;
+            document.getElementById('personaEmoji').checked = persona.use_emoji;
+            document.getElementById('personaHashtags').checked = persona.use_hashtags;
+            document.getElementById('personaMentionUser').checked = persona.mention_user;
+            document.getElementById('personaPrompt').value = persona.custom_prompt || '';
+            document.getElementById('personaModal').classList.remove('hidden');
+        });
+}
+
+function deletePersona(personaId) {
+    if (confirm('Are you sure you want to delete this persona?')) {
+        fetch(`/personas/${personaId}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`persona-${personaId}`).remove();
+                } else {
+                    alert('Failed to delete persona: ' + data.error);
+                }
+            });
+    }
+}
+
+document.getElementById('personaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const personaId = document.getElementById('personaId').value;
+    const data = {
+        name: document.getElementById('personaName').value,
+        description: document.getElementById('personaDescription').value,
+        style: document.getElementById('personaStyle').value,
+        length: document.getElementById('personaLength').value,
+        speech_settings: document.getElementById('personaSpeech').value,
+        use_emoji: document.getElementById('personaEmoji').checked,
+        use_hashtags: document.getElementById('personaHashtags').checked,
+        mention_user: document.getElementById('personaMentionUser').checked,
+        custom_prompt: document.getElementById('personaPrompt').value || ''
+    };
+    
+    const method = personaId ? 'PUT' : 'POST';
+    const url = personaId ? `/personas/${personaId}` : '/personas/create';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Failed to save persona: ' + data.error);
+        }
+    });
+});
+</script>
+{% endblock %} 

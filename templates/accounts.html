@@ -1,0 +1,693 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold">Manage Twitter Accounts</h1>
+        <a href="{{ url_for('manage_personas') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Manage Personas
+        </a>
+    </div>
+
+    <!-- Accounts List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Create New Account Card -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Create New Account</h2>
+            <form action="{{ url_for('manage_accounts') }}" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Account Name</label>
+                    <input type="text" name="account_name" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Consumer Key</label>
+                    <input type="text" name="consumer_key" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Consumer Secret</label>
+                    <input type="password" name="consumer_secret" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Access Token</label>
+                    <input type="text" name="access_token" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Access Token Secret</label>
+                    <input type="password" name="access_token_secret" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <button type="submit" 
+                        class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Save Account
+                </button>
+            </form>
+        </div>
+
+        {% for account in accounts %}
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold">{{ account.account_name }}</h2>
+                    <span class="text-sm text-gray-500">{{ 'Active' if account.is_active else 'Inactive' }}</span>
+                </div>
+                <div class="flex space-x-2">
+                    {% if not account.is_active %}
+                    <form action="{{ url_for('switch_account', account_id=account.id) }}" method="post" class="inline">
+                        <button type="submit" class="text-green-500 hover:text-green-700">
+                            <i class="fas fa-check-circle"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Posting Mode Selection -->
+            <div class="mb-6 border-b pb-4">
+                <h3 class="text-lg font-medium mb-2">Posting Mode</h3>
+                <div class="flex space-x-4"I still have 'Database error: no such table: accounts" when clicking AI comments in the menu>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="posting_mode_{{ account.id }}" value="manual" 
+                               data-account-id="{{ account.id }}" data-mode="manual"
+                               onchange="toggleAutomationSettings(this.dataset.accountId, this.dataset.mode)"
+                               {{ 'checked' if account.automation_mode == 'manual' else '' }}
+                               class="form-radio text-blue-600">
+                        <span class="ml-2">Manual</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="posting_mode_{{ account.id }}" value="automatic"
+                               data-account-id="{{ account.id }}" data-mode="automatic"
+                               onchange="toggleAutomationSettings(this.dataset.accountId, this.dataset.mode)"
+                               {{ 'checked' if account.automation_mode == 'automatic' else '' }}
+                               class="form-radio text-blue-600">
+                        <span class="ml-2">Automatic</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Automation Settings (hidden by default) -->
+            <div id="automation_settings_{{ account.id }}" class="space-y-4 {{ 'hidden' if account.automation_mode == 'manual' else '' }}">
+                <h3 class="text-lg font-medium mb-2">Automation Settings</h3>
+                
+                <!-- Keywords -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Keywords (max 3)</label>
+                    <div id="keywords_container_{{ account.id }}" class="space-y-2">
+                        {% for keyword in account.automation_settings.keywords %}
+                        <div class="flex gap-2">
+                            <input type="text" value="{{ keyword }}"
+                                   class="keyword-input mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <button type="button" onclick="removeKeyword(this)"
+                                    class="mt-1 bg-red-500 text-white px-3 rounded-md hover:bg-red-600">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" 
+                            data-account-id="{{ account.id }}"
+                            onclick="addKeyword(this.dataset.accountId)"
+                            class="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                            {{ 'disabled' if account.automation_settings.keywords|length >= 3 else '' }}>
+                        + Add Keyword
+                    </button>
+                </div>
+
+                <!-- Persona Selection for Automation -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Select Persona for Automation</label>
+                    <select class="automation-persona mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                            data-account-id="{{ account.id }}"
+                            onchange="updateAutomationPersona(this.dataset.accountId, this.value)">
+                        <option value="">No Persona Selected</option>
+                        {% for persona in personas %}
+                        <option value="{{ persona.id }}" 
+                                {{ 'selected' if account.automation_persona_id == persona.id else '' }}>
+                            {{ persona.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-sm text-gray-500">Select a persona to use for automated comments</p>
+                </div>
+
+                <!-- Working Schedule -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Working Schedule</label>
+                    {% for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] %}
+                    <div class="flex items-center space-x-4 py-2 border-b" data-day="{{ day }}">
+                        <div class="w-24">
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" 
+                                       onchange="updateSchedule('{{ account.id }}', '{{ day }}')"
+                                       {{ 'checked' if account.automation_settings.working_schedule[day].enabled else '' }}
+                                       class="form-checkbox text-blue-600">
+                                <span class="ml-2 capitalize">{{ day }}</span>
+                            </label>
+                        </div>
+                        <div class="flex space-x-2 items-center">
+                            <input type="time" 
+                                   value="{{ account.automation_settings.working_schedule[day].start }}"
+                                   onchange="updateSchedule('{{ account.id }}', '{{ day }}')"
+                                   class="rounded-md border-gray-300 shadow-sm">
+                            <span>to</span>
+                            <input type="time" 
+                                   value="{{ account.automation_settings.working_schedule[day].end }}"
+                                   onchange="updateSchedule('{{ account.id }}', '{{ day }}')"
+                                   class="rounded-md border-gray-300 shadow-sm">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Daily Limit -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Daily Comment Limit (max 17)</label>
+                    <input type="range" min="1" max="17" 
+                           data-account-id="{{ account.id }}"
+                           value="{{ account.automation_settings.daily_comment_limit }}"
+                           onchange="updateDailyLimit(this.dataset.accountId, this.value)"
+                           oninput="document.getElementById('daily_limit_value_' + this.dataset.accountId).textContent = this.value"
+                           class="w-full">
+                    <span id="daily_limit_value_{{ account.id }}" class="text-sm text-gray-600">
+                        {{ account.automation_settings.daily_comment_limit }}
+                    </span>
+                </div>
+
+                <!-- Engagement Thresholds -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Min. Likes</label>
+                        <input type="number" min="900" 
+                               data-account-id="{{ account.id }}"
+                               value="{{ account.automation_settings.min_likes }}"
+                               onchange="updateEngagementThreshold(this.dataset.accountId, 'min_likes', this.value)"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Min. Retweets</label>
+                        <input type="number" min="0" 
+                               data-account-id="{{ account.id }}"
+                               value="{{ account.automation_settings.min_retweets }}"
+                               onchange="updateEngagementThreshold(this.dataset.accountId, 'min_retweets', this.value)"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                </div>
+
+                <button data-account-id="{{ account.id }}"
+                        onclick="saveAutomationSettings(this.dataset.accountId)"
+                        class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Save Automation Settings
+                </button>
+            </div>
+
+            <!-- Persona Selection -->
+            <div class="mb-4 mt-6">
+                <h3 class="text-lg font-medium mb-2">Persona Settings</h3>
+                <select data-account-id="{{ account.id }}"
+                        onchange="updatePersona(this.dataset.accountId, this.value)"
+                        class="block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">No Persona Selected</option>
+                    {% for persona in personas %}
+                    <option value="{{ persona.id }}" 
+                            {{ 'selected' if account.persona_id == persona.id else '' }}>
+                        {{ persona.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Custom Settings -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-medium">Custom Settings</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Style</label>
+                    <select name="style" 
+                            data-account-id="{{ account.id }}"
+                            onchange="updateSetting(this.dataset.accountId, 'custom_style', this.value)"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        {% for style in ['official', 'casual', 'neutral', 'ironic', 'sarcastic', 'gen-z'] %}
+                        <option value="{{ style }}" {{ 'selected' if account.custom_style == style else '' }}>
+                            {{ style|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Length</label>
+                    <select name="length" 
+                            data-account-id="{{ account.id }}"
+                            onchange="updateSetting(this.dataset.accountId, 'custom_length', this.value)"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        {% for length in ['short', 'medium', 'long'] %}
+                        <option value="{{ length }}" {{ 'selected' if account.custom_length == length else '' }}>
+                            {{ length|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Speech Settings</label>
+                    <select name="speech_settings" 
+                            data-account-id="{{ account.id }}"
+                            onchange="updateSetting(this.dataset.accountId, 'custom_speech_settings', this.value)"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="text" {{ 'selected' if account.custom_speech_settings == 'text' else '' }}>
+                            Text Only
+                        </option>
+                        <option value="text with a question" {{ 'selected' if account.custom_speech_settings == 'text with a question' else '' }}>
+                            Text with Question
+                        </option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="use_emoji" 
+                               data-account-id="{{ account.id }}"
+                               onchange="updateSetting(this.dataset.accountId, 'custom_use_emoji', this.checked)"
+                               {{ 'checked' if account.custom_use_emoji else '' }}
+                               class="rounded border-gray-300 text-blue-600">
+                        <label class="ml-2 text-sm text-gray-700">Use Emoji</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="use_hashtags"
+                               data-account-id="{{ account.id }}"
+                               onchange="updateSetting(this.dataset.accountId, 'custom_use_hashtags', this.checked)"
+                               {{ 'checked' if account.custom_use_hashtags else '' }}
+                               class="rounded border-gray-300 text-blue-600">
+                        <label class="ml-2 text-sm text-gray-700">Use Hashtags</label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Custom Prompt</label>
+                    <textarea name="custom_prompt" 
+                              data-account-id="{{ account.id }}"
+                              onchange="updateSetting(this.dataset.accountId, 'custom_prompt', this.value)"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                              rows="3">{{ account.custom_prompt or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Notifications -->
+<div id="notifications" class="fixed top-20 right-4 z-50 space-y-2">
+</div>
+
+<script>
+function toggleAutomationSettings(accountId, mode) {
+    const settingsDiv = document.getElementById(`automation_settings_${accountId}`);
+    if (mode === 'automatic') {
+        settingsDiv.classList.remove('hidden');
+    } else {
+        settingsDiv.classList.add('hidden');
+    }
+    
+    // Update the automation mode in the backend
+    fetch(`/accounts/${accountId}/automation/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mode: mode })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            showNotification('error', data.error);
+        }
+    });
+}
+
+function addKeyword(accountId) {
+    const container = document.getElementById(`keywords_container_${accountId}`);
+    const keywordInputs = container.getElementsByClassName('keyword-input');
+    
+    if (keywordInputs.length >= 3) {
+        showNotification('warning', 'Maximum 3 keywords allowed');
+        return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'flex gap-2';
+    div.innerHTML = `
+        <input type="text" class="keyword-input mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+        <button type="button" onclick="removeKeyword(this)"
+                class="mt-1 bg-red-500 text-white px-3 rounded-md hover:bg-red-600">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeKeyword(button) {
+    button.parentElement.remove();
+}
+
+function updateSchedule(accountId, day) {
+    console.log(`Updating schedule for account ${accountId}, day ${day}`);
+    
+    const container = document.querySelector(`[data-day="${day}"]`);
+    const enabled = container.querySelector('input[type="checkbox"]').checked;
+    const start = container.querySelector('input[type="time"]:first-of-type').value;
+    const end = container.querySelector('input[type="time"]:last-of-type').value;
+    
+    console.log(`Day settings - enabled: ${enabled}, start: ${start}, end: ${end}`);
+    
+    // Get the automation settings container
+    const settingsContainer = document.getElementById(`automation_settings_${accountId}`);
+    
+    // Get or initialize the schedule data
+    let scheduleData = {};
+    const existingData = settingsContainer.getAttribute('data-schedule');
+    
+    if (existingData) {
+        try {
+            scheduleData = JSON.parse(existingData);
+        } catch (e) {
+            console.error('Error parsing schedule data:', e);
+            // Initialize with all days
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            days.forEach(d => {
+                const dayContainer = document.querySelector(`[data-day="${d}"]`);
+                if (dayContainer) {
+                    const dayCheckbox = dayContainer.querySelector('input[type="checkbox"]');
+                    const dayStart = dayContainer.querySelector('input[type="time"]:first-of-type');
+                    const dayEnd = dayContainer.querySelector('input[type="time"]:last-of-type');
+                    
+                    scheduleData[d] = {
+                        enabled: dayCheckbox ? dayCheckbox.checked : false,
+                        start: dayStart ? dayStart.value : '09:00',
+                        end: dayEnd ? dayEnd.value : '17:00'
+                    };
+                }
+            });
+        }
+    } else {
+        // Initialize with all days
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        days.forEach(d => {
+            const dayContainer = document.querySelector(`[data-day="${d}"]`);
+            if (dayContainer) {
+                const dayCheckbox = dayContainer.querySelector('input[type="checkbox"]');
+                const dayStart = dayContainer.querySelector('input[type="time"]:first-of-type');
+                const dayEnd = dayContainer.querySelector('input[type="time"]:last-of-type');
+                
+                scheduleData[d] = {
+                    enabled: dayCheckbox ? dayCheckbox.checked : false,
+                    start: dayStart ? dayStart.value : '09:00',
+                    end: dayEnd ? dayEnd.value : '17:00'
+                };
+            }
+        });
+    }
+    
+    // Update the schedule for this day
+    scheduleData[day] = {
+        enabled: enabled,
+        start: start || '09:00',
+        end: end || '17:00'
+    };
+    
+    console.log('Updated schedule data:', scheduleData);
+    
+    // Store the updated schedule in the automation settings container
+    settingsContainer.setAttribute('data-schedule', JSON.stringify(scheduleData));
+}
+
+function updateDailyLimit(accountId, value) {
+    // Implementation will be added
+}
+
+function updateEngagementThreshold(accountId, type, value) {
+    // Implementation will be added
+}
+
+function updateAutomationPersona(accountId, personaId) {
+    // Store the selected persona ID in a data attribute for later saving
+    const container = document.getElementById(`automation_settings_${accountId}`);
+    if (container) {
+        container.setAttribute('data-automation-persona', personaId);
+    }
+}
+
+function saveAutomationSettings(accountId) {
+    // Get the container with error checking
+    const container = document.getElementById(`automation_settings_${accountId}`);
+    if (!container) {
+        console.error(`Container not found for account ${accountId}`);
+        showNotification('error', 'Error: Could not find settings container');
+        return;
+    }
+
+    try {
+        // Collect keywords
+        const keywordInputs = container.getElementsByClassName('keyword-input');
+        const keywords = Array.from(keywordInputs).map(input => input.value.trim()).filter(k => k);
+        
+        if (keywords.length === 0) {
+            showNotification('error', 'At least one keyword is required');
+            return;
+        }
+        
+        if (keywords.length > 3) {
+            showNotification('error', 'Maximum 3 keywords allowed');
+            return;
+        }
+
+        // Get selected persona
+        const personaId = container.getAttribute('data-automation-persona') || null;
+        
+        // Collect schedule data directly from the UI elements
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        let schedule = {};
+        
+        days.forEach(day => {
+            const dayContainer = container.querySelector(`[data-day="${day}"]`);
+            if (!dayContainer) {
+                throw new Error(`Schedule container not found for ${day}`);
+            }
+            
+            const checkbox = dayContainer.querySelector('input[type="checkbox"]');
+            const startTime = dayContainer.querySelector('input[type="time"]:first-of-type');
+            const endTime = dayContainer.querySelector('input[type="time"]:last-of-type');
+            
+            if (!checkbox || !startTime || !endTime) {
+                throw new Error(`Missing schedule inputs for ${day}`);
+            }
+            
+            schedule[day] = {
+                enabled: checkbox.checked,
+                start: startTime.value || '09:00',
+                end: endTime.value || '17:00'
+            };
+        });
+        
+        // Get other settings with error checking
+        const dailyLimitInput = container.querySelector('input[type="range"]');
+        const minLikesInput = container.querySelector('input[type="number"][onchange*="min_likes"]');
+        const minRetweetsInput = container.querySelector('input[type="number"][onchange*="min_retweets"]');
+        
+        if (!dailyLimitInput || !minLikesInput || !minRetweetsInput) {
+            throw new Error('Could not find all required input fields');
+        }
+        
+        const settings = {
+            keywords: keywords,
+            working_schedule: schedule,
+            daily_comment_limit: parseInt(dailyLimitInput.value) || 1,
+            min_likes: parseInt(minLikesInput.value) || 0,
+            min_retweets: parseInt(minRetweetsInput.value) || 0,
+            automation_persona_id: personaId
+        };
+        
+        // Log the settings for debugging
+        console.log('Sending settings to server:', settings);
+        
+        fetch(`/accounts/${accountId}/automation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', 'Automation settings saved successfully');
+                updateUIWithNewSettings(accountId, settings);
+            } else {
+                showNotification('error', data.error || 'Error saving settings');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving automation settings:', error);
+            showNotification('error', `Error: ${error.message}`);
+        });
+        
+    } catch (error) {
+        console.error('Error collecting automation settings:', error);
+        showNotification('error', `Error: ${error.message}`);
+    }
+}
+
+function updateUIWithNewSettings(accountId, settings) {
+    const container = document.getElementById(`automation_settings_${accountId}`);
+    if (!container) {
+        console.error('Container not found for updating UI');
+        return;
+    }
+
+    // Update keywords
+    const keywordsContainer = document.getElementById(`keywords_container_${accountId}`);
+    keywordsContainer.innerHTML = '';
+    settings.keywords.forEach(keyword => {
+        const div = document.createElement('div');
+        div.className = 'flex gap-2';
+        div.innerHTML = `
+            <input type="text" value="${keyword}" 
+                   class="keyword-input mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <button type="button" onclick="removeKeyword(this)" 
+                    class="mt-1 bg-red-500 text-white px-3 rounded-md hover:bg-red-600">×</button>
+        `;
+        keywordsContainer.appendChild(div);
+    });
+
+    // Update automation persona
+    const personaSelect = container.querySelector('.automation-persona');
+    if (personaSelect) {
+        personaSelect.value = settings.automation_persona_id || '';
+        container.setAttribute('data-automation-persona', settings.automation_persona_id || '');
+    }
+
+    // Update schedule
+    Object.entries(settings.working_schedule).forEach(([day, schedule]) => {
+        const dayContainer = container.querySelector(`[data-day="${day}"]`);
+        if (dayContainer) {
+            const checkbox = dayContainer.querySelector('input[type="checkbox"]');
+            const startTime = dayContainer.querySelector('input[type="time"]:first-of-type');
+            const endTime = dayContainer.querySelector('input[type="time"]:last-of-type');
+
+            if (checkbox) checkbox.checked = Boolean(schedule.enabled);
+            if (startTime) startTime.value = schedule.start || '09:00';
+            if (endTime) endTime.value = schedule.end || '17:00';
+            
+            // Log the update for debugging
+            console.log(`Updating UI for ${day}:`, {
+                enabled: schedule.enabled,
+                start: schedule.start,
+                end: schedule.end
+            });
+        }
+    });
+
+    // Update other settings
+    const dailyLimitInput = container.querySelector('input[type="range"]');
+    const minLikesInput = container.querySelector('input[type="number"][onchange*="min_likes"]');
+    const minRetweetsInput = container.querySelector('input[type="number"][onchange*="min_retweets"]');
+
+    if (dailyLimitInput) dailyLimitInput.value = settings.daily_comment_limit;
+    if (minLikesInput) minLikesInput.value = settings.min_likes;
+    if (minRetweetsInput) minRetweetsInput.value = settings.min_retweets;
+    
+    // Update the data-schedule attribute to match the current state
+    container.setAttribute('data-schedule', JSON.stringify(settings.working_schedule));
+}
+
+// Helper function to show notifications
+function showNotification(type, message) {
+    const notifications = document.getElementById('notifications');
+    if (!notifications) {
+        console.error('Notifications container not found');
+        return;
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `px-4 py-2 rounded-lg shadow-md ${
+        type === 'error' ? 'bg-red-500' : 
+        type === 'warning' ? 'bg-yellow-500' : 
+        'bg-green-500'
+    } text-white`;
+    notification.textContent = message;
+    
+    notifications.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 5000);
+}
+
+// Existing functions
+function updatePersona(accountId, personaId) {
+    fetch(`/accounts/${accountId}/persona`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            persona_id: personaId || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            showNotification('error', 'Error updating persona');
+        }
+    });
+}
+
+function updateSetting(accountId, setting, value) {
+    fetch(`/accounts/${accountId}/settings`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            setting: setting,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            showNotification('error', 'Error updating setting');
+        }
+    });
+}
+
+// Initialize schedule data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Find all automation settings containers
+    const automationContainers = document.querySelectorAll('[id^="automation_settings_"]');
+    
+    automationContainers.forEach(container => {
+        const accountId = container.id.replace('automation_settings_', '');
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        let scheduleData = {};
+        
+        days.forEach(day => {
+            const dayContainer = container.querySelector(`[data-day="${day}"]`);
+            if (dayContainer) {
+                const checkbox = dayContainer.querySelector('input[type="checkbox"]');
+                const startTime = dayContainer.querySelector('input[type="time"]:first-of-type');
+                const endTime = dayContainer.querySelector('input[type="time"]:last-of-type');
+                
+                scheduleData[day] = {
+                    enabled: checkbox ? checkbox.checked : false,
+                    start: startTime ? startTime.value : '09:00',
+                    end: endTime ? endTime.value : '17:00'
+                };
+            }
+        });
+        
+        // Store initial schedule data
+        container.setAttribute('data-schedule', JSON.stringify(scheduleData));
+    });
+});
+</script>
+{% endblock %} 

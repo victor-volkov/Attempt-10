@@ -1,0 +1,844 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">RSS Feed Configuration</h1>
+        <button data-action="openConfig" 
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            Add New Configuration
+        </button>
+    </div>
+
+    <!-- Active Configurations -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feed Source</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Persona</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for config in configs %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ config.account_name }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-900">{{ config.feed_name }}</div>
+                        <div class="text-xs text-gray-500">{{ config.feed_url }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ config.persona_name }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if config.schedule_settings %}
+                            {% set schedule = config.schedule_settings|fromjson if config.schedule_settings is string else config.schedule_settings %}
+                            <div class="text-sm text-gray-900">
+                                {{ schedule.posts_per_day }} posts per day<br>
+                                {% for day, settings in schedule.days.items() %}
+                                    {% if settings.enabled %}
+                                        {{ day }}: {{ settings.start }} - {{ settings.end }}<br>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-sm text-gray-500">Not configured</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                     {{ 'bg-green-100 text-green-800' if config.is_active else 'bg-red-100 text-red-800' }}">
+                            {{ 'Active' if config.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button data-action="edit" 
+                                data-config-id="{{ config.id }}" 
+                                class="text-blue-600 hover:text-blue-900 mr-3">
+                            Edit
+                        </button>
+                        <button data-action="toggle" 
+                                data-config-id="{{ config.id }}" 
+                                class="text-gray-600 hover:text-gray-900 mr-3">
+                            {{ 'Disable' if config.is_active else 'Enable' }}
+                        </button>
+                        <button data-action="delete" 
+                                data-config-id="{{ config.id }}" 
+                                class="text-red-600 hover:text-red-900">
+                            Delete
+                        </button>
+                        <button data-action="test" 
+                                data-config-id="{{ config.id }}" 
+                                class="text-blue-600 hover:text-blue-900 mr-3">
+                            Test Now
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        No RSS feed configurations found. Click "Add New Configuration" to create one.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Include modals -->
+{% include 'modals/rss_feed_modal.html' %}
+{% include 'modals/schedule_modal.html' %}
+
+<!-- RSS Configuration Modal -->
+<div id="configModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" style="z-index: 40;">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-[400px] w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900" id="modalTitle">New RSS Feed Configuration</h3>
+                    <button type="button" data-action="closeConfig" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="configForm" class="space-y-4">
+                    <!-- Basic Configuration -->
+                    <div class="space-y-4">
+                        <!-- Account Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900">Twitter Account</label>
+                            <select id="accountSelect" name="account_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900">
+                                <option value="" class="text-gray-900">Select Account</option>
+                                {% for account in accounts %}
+                                <option value="{{ account.id }}" class="text-gray-900">{{ account.account_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Feed Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900">RSS Feed</label>
+                            <div class="flex items-start space-x-2">
+                                <select id="feedSelect" name="feed_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900">
+                                    <option value="" class="text-gray-900">Select Feed</option>
+                                    {% for feed in feeds %}
+                                    <option value="{{ feed.id }}" class="text-gray-900">{{ feed.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" data-action="openFeed" 
+                                        class="mt-1 h-[38px] px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-900 
+                                               bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Add New
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Persona Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900">Persona</label>
+                            <div id="personaSection" class="mt-2">
+                                <!-- No Persona Selected State -->
+                                <div id="noPersonaState" class="{% if selected_persona %}hidden{% endif %}">
+                                    <p class="text-sm text-gray-600 mb-2">Select a persona to define how the content will be processed and posted</p>
+                                    <button type="button" data-action="openPersona" 
+                                            class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-900 
+                                                   bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        Choose Persona
+                                    </button>
+                                </div>
+
+                                <!-- Selected Persona State -->
+                                <div id="selectedPersonaState" class="{% if not selected_persona %}hidden{% endif %} border rounded-lg p-4">
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-start">
+                                            <h4 class="font-medium text-gray-900" id="selectedPersonaName">
+                                                {{ selected_persona.name if selected_persona else '' }}
+                                            </h4>
+                                            <button type="button" data-action="openPersona"
+                                                    class="text-blue-600 hover:text-blue-800 text-sm">
+                                                Change
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Settings -->
+                                        <div class="flex flex-wrap gap-2" id="selectedPersonaSettings">
+                                            {% if selected_persona %}
+                                                {% if selected_persona.style %}
+                                                    <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                        <i class="fas fa-pen-fancy mr-1"></i>
+                                                        {{ selected_persona.style }}
+                                                    </span>
+                                                {% endif %}
+                                                {% if selected_persona.length %}
+                                                    <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                        <i class="fas fa-text-width mr-1"></i>
+                                                        {{ selected_persona.length }}
+                                                    </span>
+                                                {% endif %}
+                                                {% if selected_persona.use_emoji %}
+                                                    <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                        <i class="far fa-smile mr-1"></i>
+                                                    </span>
+                                                {% endif %}
+                                                {% if selected_persona.use_hashtags %}
+                                                    <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                        <i class="fas fa-hashtag mr-1"></i>
+                                                    </span>
+                                                {% endif %}
+                                                {% if selected_persona.mention_user %}
+                                                    <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                                        <i class="fas fa-at mr-1"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <!-- Hidden input to store selected persona ID -->
+                                    <input type="hidden" id="personaSelect" name="persona_id" value="{{ selected_persona.id if selected_persona else '' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Configuration -->
+                    <div class="border-t pt-4 mt-4">
+                        <h4 class="text-lg font-medium text-gray-900 mb-4">Posting Schedule</h4>
+                        
+                        <div class="space-y-4">
+                            <!-- Posts per day -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Posts per day</label>
+                                <input type="number" id="postsPerDay" min="1" max="24" value="1"
+                                       class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm">
+                            </div>
+
+                            <!-- Schedule Table -->
+                            <div class="overflow-x-auto -mx-6">
+                                <div class="inline-block min-w-full align-middle px-6">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead>
+                                            <tr>
+                                                <th class="px-2 py-2 bg-gray-50"></th>
+                                                {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                                <th class="px-1 py-2 bg-gray-50">
+                                                    <button type="button" 
+                                                            data-day="{{ day }}"
+                                                            class="day-toggle w-full px-3 py-2 text-sm font-medium rounded-md
+                                                                   border border-gray-300 bg-white text-gray-700
+                                                                   hover:bg-gray-50 focus:outline-none focus:ring-2 
+                                                                   focus:ring-offset-2 focus:ring-blue-500">
+                                                        {{ day }}
+                                                    </button>
+                                                </th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="px-2 py-2 text-sm font-medium text-gray-900">Start</td>
+                                                {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                                <td class="px-1 py-1">
+                                                    <input type="time" 
+                                                           name="startTime_{{ day }}" 
+                                                           value="09:00"
+                                                           class="block w-full text-sm border-gray-300 rounded-md shadow-sm p-1"
+                                                           disabled>
+                                                </td>
+                                                {% endfor %}
+                                            </tr>
+                                            <tr>
+                                                <td class="px-2 py-2 text-sm font-medium text-gray-900">End</td>
+                                                {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                                <td class="px-1 py-1">
+                                                    <input type="time" 
+                                                           name="endTime_{{ day }}" 
+                                                           value="17:00"
+                                                           class="block w-full text-sm border-gray-300 rounded-md shadow-sm p-1"
+                                                           disabled>
+                                                </td>
+                                                {% endfor %}
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex justify-end pt-4 border-t">
+                        <button type="submit" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 
+                                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Replace the current persona modal with the one from ai_comments -->
+<div id="personaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+    <div class="min-h-screen px-4 text-center flex items-center justify-center">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto">
+            <div class="flex flex-col max-h-[80vh]">
+                <!-- Header -->
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-semibold text-gray-900">Select Persona</h3>
+                        <button data-action="closePersona" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scrollable Content -->
+                <div class="p-6 overflow-y-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for persona in personas %}
+                        <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                             onclick="selectPersona('{{ persona.id }}')">
+                            <div class="space-y-3">
+                                <h4 class="font-medium text-gray-900">{{ persona.name }}</h4>
+                                
+                                <!-- Settings -->
+                                <div class="flex flex-wrap gap-2">
+                                    {% if persona.style %}
+                                        <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                            <i class="fas fa-pen-fancy mr-1"></i>
+                                            {{ persona.style }}
+                                        </span>
+                                    {% endif %}
+                                    {% if persona.length %}
+                                        <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                            <i class="fas fa-text-width mr-1"></i>
+                                            {{ persona.length }}
+                                        </span>
+                                    {% endif %}
+                                    {% if persona.use_emoji %}
+                                        <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                            <i class="far fa-smile mr-1"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if persona.use_hashtags %}
+                                        <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                            <i class="fas fa-hashtag mr-1"></i>
+                                        </span>
+                                    {% endif %}
+                                    {% if persona.mention_user %}
+                                        <span class="inline-flex items-center text-xs text-gray-600 bg-gray-100 rounded px-2 py-1">
+                                            <i class="fas fa-at mr-1"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Custom Prompt with Expand/Collapse -->
+                                {% if persona.custom_prompt %}
+                                    <div class="pt-2 border-t">
+                                        <div class="relative text-left">
+                                            <p class="text-sm text-gray-600 prompt-text" 
+                                               id="prompt-{{ persona.id }}"
+                                               data-expanded="false"
+                                               data-short-text="{{ persona.custom_prompt[:110] + '...' if persona.custom_prompt|length > 110 else persona.custom_prompt }}">
+                                                {{ persona.custom_prompt[:110] + '...' if persona.custom_prompt|length > 110 else persona.custom_prompt }}
+                                            </p>
+                                            {% if persona.custom_prompt|length > 110 %}
+                                                <button onclick="togglePrompt(event, '{{ persona.id }}')" 
+                                                        class="absolute bottom-0 right-0 text-gray-400 hover:text-gray-600 bg-white px-1">
+                                                    <i class="fas fa-chevron-down text-xs"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t">
+                    <div class="flex justify-end">
+                        <button onclick="openAddPersonaModal()" 
+                                class="text-blue-600 hover:text-blue-800 font-medium">
+                            + Create New Persona
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentConfigId = null;
+let scheduleData = null;
+
+// Modal handling functions
+function showModal(modalId) {
+    console.log('Showing modal:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        console.log('Found modal, showing it');
+        modal.classList.remove('hidden');
+        modal.style.display = 'block';
+        
+        // If opening feedModal, adjust the config modal
+        if (modalId === 'feedModal') {
+            const configModal = document.getElementById('configModal');
+            configModal.style.background = 'none';  // Remove the overlay from config modal
+            configModal.style.pointerEvents = 'none';  // Disable interactions with config modal
+        }
+    } else {
+        console.error('Modal not found:', modalId);
+    }
+}
+
+function hideModal(modalId) {
+    console.log('Hiding modal:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        
+        // If closing feedModal, restore the config modal
+        if (modalId === 'feedModal') {
+            const configModal = document.getElementById('configModal');
+            configModal.style.background = '';  // Restore the overlay
+            configModal.style.pointerEvents = '';  // Restore interactions
+        }
+    } else {
+        console.error('Modal not found:', modalId);
+    }
+}
+
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded');
+    
+    // Add direct event listener to the "Add New Configuration" button
+    const addConfigBtn = document.querySelector('button[data-action="openConfig"]');
+    if (addConfigBtn) {
+        console.log('Found Add Config button');
+        addConfigBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Add Config button clicked');
+            currentConfigId = null;
+            showModal('configModal');
+            document.getElementById('modalTitle').textContent = 'New RSS Feed Configuration';
+            document.getElementById('configForm').reset();
+        });
+    } else {
+        console.error('Add Config button not found');
+    }
+    
+    // Handle persona modal close button
+    const closePersonaBtn = document.querySelector('[data-action="closePersona"]');
+    if (closePersonaBtn) {
+        closePersonaBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closePersonaModal();
+        });
+    }
+
+    // Handle clicking outside modal to close
+    const personaModal = document.getElementById('personaModal');
+    if (personaModal) {
+        personaModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePersonaModal();
+            }
+        });
+    }
+
+    // Handle persona modal open button
+    const openPersonaBtn = document.querySelector('button[data-action="openPersona"]');
+    if (openPersonaBtn) {
+        openPersonaBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openPersonaModal();
+        });
+    }
+    
+    // Add event listeners for other modal open buttons
+    document.querySelector('button[data-action="openFeed"]')?.addEventListener('click', () => showModal('feedModal'));
+    document.querySelector('button[data-action="openSchedule"]')?.addEventListener('click', () => showModal('scheduleModal'));
+    
+    // Debug info
+    console.log('Modals found:', {
+        configModal: !!document.getElementById('configModal'),
+        feedModal: !!document.getElementById('feedModal'),
+        scheduleModal: !!document.getElementById('scheduleModal'),
+        personaModal: !!document.getElementById('personaModal')
+    });
+
+    // Simpler button handler
+    document.querySelector('button[data-action="openPersona"]')?.addEventListener('click', openPersonaModal);
+
+    // Action buttons handlers
+    document.querySelectorAll('[data-action="edit"]').forEach(button => {
+        button.addEventListener('click', () => {
+            const configId = button.dataset.configId;
+            loadConfig(configId);
+        });
+    });
+
+    document.querySelectorAll('[data-action="toggle"]').forEach(button => {
+        button.addEventListener('click', () => {
+            const configId = button.dataset.configId;
+            toggleConfig(configId);
+        });
+    });
+
+    document.querySelectorAll('[data-action="delete"]').forEach(button => {
+        button.addEventListener('click', () => {
+            if (confirm('Are you sure you want to delete this configuration?')) {
+                const configId = button.dataset.configId;
+                deleteConfig(configId);
+            }
+        });
+    });
+
+    // Add test handler
+    document.querySelectorAll('[data-action="test"]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const configId = button.dataset.configId;
+            try {
+                const response = await fetch(`/api/rss/test/${configId}`, {
+                    method: 'POST'
+                });
+                if (!response.ok) throw new Error('Test failed');
+                alert('RSS processing test triggered');
+            } catch (error) {
+                alert('Error testing RSS: ' + error.message);
+            }
+        });
+    });
+});
+
+// Config management functions
+async function loadConfig(configId) {
+    try {
+        const response = await fetch(`/api/rss/config/${configId}`);
+        if (!response.ok) throw new Error('Failed to load configuration');
+        
+        const config = await response.json();
+        console.log('Loaded config:', config); // Debug log
+        
+        currentConfigId = configId;
+        
+        // Set dropdown values and verify
+        const accountSelect = document.getElementById('accountSelect');
+        const feedSelect = document.getElementById('feedSelect');
+        const personaSelect = document.getElementById('personaSelect');
+        
+        accountSelect.value = config.account_id.toString();
+        feedSelect.value = config.feed_id.toString();
+        personaSelect.value = config.persona_id.toString();
+        
+        console.log('Set values:', { // Debug log
+            account: accountSelect.value,
+            feed: feedSelect.value,
+            persona: personaSelect.value
+        });
+        
+        // Parse and set schedule data
+        const scheduleSettings = typeof config.schedule_settings === 'string' 
+            ? JSON.parse(config.schedule_settings) 
+            : config.schedule_settings;
+            
+        if (scheduleSettings && scheduleSettings.days) {
+            Object.entries(scheduleSettings.days).forEach(([day, settings]) => {
+                const button = document.querySelector(`.day-toggle[data-day="${day}"]`);
+                const startInput = document.querySelector(`input[name="startTime_${day}"]`);
+                const endInput = document.querySelector(`input[name="endTime_${day}"]`);
+                
+                if (settings.enabled) {
+                    button.classList.remove('bg-white', 'text-gray-700');
+                    button.classList.add('bg-blue-600', 'text-white');
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                }
+                
+                if (startInput && settings.start) startInput.value = settings.start;
+                if (endInput && settings.end) endInput.value = settings.end;
+            });
+        }
+        
+        document.getElementById('modalTitle').textContent = 'Edit RSS Feed Configuration';
+        showModal('configModal');
+    } catch (error) {
+        console.error('Error loading configuration:', error);
+        alert('Error loading configuration: ' + error.message);
+    }
+}
+
+async function toggleConfig(configId) {
+    try {
+        const response = await fetch(`/api/rss/config/${configId}/toggle`, {
+            method: 'POST'
+        });
+        if (!response.ok) throw new Error('Failed to toggle configuration');
+        
+        window.location.reload();
+    } catch (error) {
+        alert('Error toggling configuration: ' + error.message);
+    }
+}
+
+async function deleteConfig(configId) {
+    try {
+        const response = await fetch('/api/rss/config', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: configId })
+        });
+        if (!response.ok) throw new Error('Failed to delete configuration');
+        
+        window.location.reload();
+    } catch (error) {
+        alert('Error deleting configuration: ' + error.message);
+    }
+}
+
+// Form handling
+document.getElementById('feedForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        name: document.getElementById('feedName').value,
+        url: document.getElementById('feedUrl').value,
+        description: document.getElementById('feedDescription').value
+    };
+    
+    try {
+        const response = await fetch('/api/rss/feeds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) throw new Error('Failed to add feed');
+        
+        const result = await response.json();
+        
+        // Add new option to feed select
+        const select = document.getElementById('feedSelect');
+        const option = new Option(data.name, result.id);
+        select.add(option);
+        select.value = result.id;
+        
+        hideModal('feedModal');
+    } catch (error) {
+        alert('Error adding feed: ' + error.message);
+    }
+});
+
+// Schedule form handling
+document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const days = Array.from(document.querySelectorAll('input[name="days"]:checked'))
+        .map(input => input.value);
+    
+    const hours = Array.from(document.querySelectorAll('input[name="hours"]:checked'))
+        .map(input => parseInt(input.value));
+    
+    scheduleData = {
+        posts_per_day: parseInt(document.getElementById('postsPerDay').value),
+        days: days,
+        times: hours
+    };
+    
+    hideModal('scheduleModal');
+});
+
+// Config form handling
+document.getElementById('configForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const accountSelect = document.getElementById('accountSelect');
+    const feedSelect = document.getElementById('feedSelect');
+    const personaSelect = document.getElementById('personaSelect');
+    
+    // Log form values
+    console.log('Form Values:', {
+        account: accountSelect.value,
+        feed: feedSelect.value,
+        persona: personaSelect.value,
+        postsPerDay: document.getElementById('postsPerDay').value
+    });
+    
+    // Validate required fields
+    if (!accountSelect.value) {
+        alert('Please select an account');
+        return;
+    }
+    if (!feedSelect.value) {
+        alert('Please select a feed');
+        return;
+    }
+    if (!personaSelect.value) {
+        alert('Please select a persona');
+        return;
+    }
+    
+    // Gather schedule data
+    const scheduleData = {};
+    document.querySelectorAll('.day-toggle').forEach(button => {
+        const day = button.dataset.day;
+        const isEnabled = button.classList.contains('bg-blue-600');
+        const startTime = document.querySelector(`input[name="startTime_${day}"]`).value;
+        const endTime = document.querySelector(`input[name="endTime_${day}"]`).value;
+        
+        scheduleData[day] = {
+            enabled: isEnabled,
+            start: startTime,
+            end: endTime
+        };
+    });
+    
+    const data = {
+        account_id: accountSelect.value,
+        feed_id: feedSelect.value,
+        persona_id: personaSelect.value,
+        posts_per_day: parseInt(document.getElementById('postsPerDay').value),
+        schedule_settings: {
+            days: scheduleData,
+            posts_per_day: parseInt(document.getElementById('postsPerDay').value)
+        }
+    };
+    
+    console.log('Sending data:', data); // Log the data being sent
+    
+    try {
+        const response = await fetch('/api/rss/config', {
+            method: currentConfigId ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const responseData = await response.json(); // Get response data
+        console.log('Response:', responseData); // Log the response
+        
+        if (!response.ok) throw new Error('Failed to save configuration');
+        
+        window.location.reload();
+    } catch (error) {
+        console.error('Error saving configuration:', error);
+        alert('Error saving configuration: ' + error.message);
+    }
+});
+
+// Style selected days
+document.querySelectorAll('input[name="days"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const label = this.closest('label');
+        if (this.checked) {
+            label.classList.add('bg-blue-100', 'border-blue-500', 'rounded');
+        } else {
+            label.classList.remove('bg-blue-100', 'border-blue-500', 'rounded');
+        }
+    });
+});
+
+// Simple modal functions
+function openPersonaModal() {
+    const modal = document.getElementById('personaModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closePersonaModal() {
+    const modal = document.getElementById('personaModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function selectPersona(personaId) {
+    // Get the persona card
+    const personaCard = document.querySelector(`[onclick="selectPersona('${personaId}')"]`);
+    if (!personaCard) return;
+
+    // Get persona name and settings
+    const name = personaCard.querySelector('h4').textContent;
+    const settings = personaCard.querySelectorAll('.bg-gray-100');
+    
+    // Update hidden input
+    document.getElementById('personaSelect').value = personaId;
+    
+    // Update display name
+    document.getElementById('selectedPersonaName').textContent = name;
+    
+    // Update settings display
+    const settingsContainer = document.getElementById('selectedPersonaSettings');
+    settingsContainer.innerHTML = '';
+    settings.forEach(badge => {
+        settingsContainer.appendChild(badge.cloneNode(true));
+    });
+    
+    // Show selected state
+    document.getElementById('noPersonaState').classList.add('hidden');
+    document.getElementById('selectedPersonaState').classList.remove('hidden');
+    
+    // Close modal
+    closePersonaModal();
+}
+
+// Handle prompt expansion
+function togglePrompt(event, personaId) {
+    event.stopPropagation();
+    const promptText = document.getElementById(`prompt-${personaId}`);
+    const button = event.target.closest('button');
+    const isExpanded = promptText.dataset.expanded === 'true';
+    
+    if (!isExpanded) {
+        promptText.textContent = promptText.dataset.fullText || promptText.dataset.shortText;
+        promptText.dataset.expanded = 'true';
+        button.innerHTML = '<i class="fas fa-chevron-up text-xs"></i>';
+    } else {
+        promptText.textContent = promptText.dataset.shortText;
+        promptText.dataset.expanded = 'false';
+        button.innerHTML = '<i class="fas fa-chevron-down text-xs"></i>';
+    }
+}
+
+// Handle day toggle buttons
+document.querySelectorAll('.day-toggle').forEach(button => {
+    button.addEventListener('click', function() {
+        const day = this.dataset.day;
+        const isActive = this.classList.contains('bg-blue-600');
+        
+        // Toggle button state
+        if (isActive) {
+            this.classList.remove('bg-blue-600', 'text-white');
+            this.classList.add('bg-white', 'text-gray-700');
+        } else {
+            this.classList.remove('bg-white', 'text-gray-700');
+            this.classList.add('bg-blue-600', 'text-white');
+        }
+        
+        // Enable/disable time inputs
+        const startInput = document.querySelector(`input[name="startTime_${day}"]`);
+        const endInput = document.querySelector(`input[name="endTime_${day}"]`);
+        
+        startInput.disabled = !isActive;
+        endInput.disabled = !isActive;
+    });
+});
+</script>
+{% endblock %} 

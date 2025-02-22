@@ -1,0 +1,53 @@
+<!-- Add to account settings form -->
+<div class="border-t pt-4 mt-4">
+    <h4 class="text-lg font-medium text-gray-900 mb-4">RSS Posting Settings</h4>
+    
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Posts per day</label>
+            <input type="number" name="rss_posts_per_day" 
+                   value="{{ account.rss_settings.posts_per_day }}"
+                   class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm">
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Maximum posts per feed</label>
+            <input type="number" name="rss_max_posts_per_feed" 
+                   value="{{ account.rss_settings.max_posts_per_feed }}"
+                   class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm">
+        </div>
+        
+        <div class="flex space-x-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Minimum article age</label>
+                <input type="text" name="rss_min_article_age" 
+                       value="{{ account.rss_settings.min_article_age }}"
+                       placeholder="1h"
+                       class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Maximum article age</label>
+                <input type="text" name="rss_max_article_age" 
+                       value="{{ account.rss_settings.max_article_age }}"
+                       placeholder="24h"
+                       class="mt-1 block w-32 rounded-md border-gray-300 shadow-sm">
+            </div>
+        </div>
+        
+        <div>
+            <label class="flex items-center">
+                <input type="checkbox" name="rss_avoid_duplicates" 
+                       {{ 'checked' if account.rss_settings.avoid_duplicates }}
+                       class="rounded border-gray-300 text-blue-600 shadow-sm">
+                <span class="ml-2 text-sm text-gray-700">Avoid duplicate content</span>
+            </label>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Custom RSS rules</label>
+            <textarea name="rss_custom_rules" 
+                      placeholder="Enter any custom rules for RSS processing..."
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm h-24">{{ account.rss_settings.custom_rules }}</textarea>
+        </div>
+    </div>
+</div> 

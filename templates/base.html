@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X Automation Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .nav-link {
+            @apply flex items-center text-gray-400 hover:text-white py-3 px-4 text-[15px] transition-colors duration-200;
+        }
+
+        .nav-link i {
+            @apply w-6 mr-3 text-lg;
+        }
+
+        .nav-link:hover {
+            @apply text-white;
+        }
+
+        .nav-link.active {
+            @apply text-white;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+
+        .submenu {
+            @apply pl-8 mt-1 space-y-1;
+        }
+
+        .submenu-link {
+            @apply flex items-center text-gray-400 hover:text-white py-2 text-[14px] transition-colors duration-200;
+        }
+
+        .card {
+            @apply bg-gray-800 rounded-xl shadow-lg p-6;
+        }
+
+        .btn-primary {
+            @apply px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200;
+        }
+
+        .btn-secondary {
+            @apply px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200;
+        }
+
+        .input-field {
+            @apply bg-gray-700 border-gray-600 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500;
+        }
+
+        .development-card {
+            @apply flex flex-col items-center justify-center text-center p-8 space-y-4;
+        }
+
+        .development-icon {
+            @apply text-6xl text-indigo-500 mb-4;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="w-64 h-screen fixed bg-[#0B1121]">
+            <div class="p-6">
+                <div class="flex items-center space-x-3 mb-12">
+                    <i class="fab fa-twitter text-2xl text-[#4B6BFB]"></i>
+                    <span class="text-xl font-semibold text-white">X Automation</span>
+                </div>
+                
+                <nav class="space-y-12">
+                    <!-- Main Navigation -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            MAIN NAVIGATION
+                        </div>
+                        <a href="{{ url_for('index') }}" 
+                           class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+
+                    <!-- Account Management -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            ACCOUNT MANAGEMENT
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('manage_accounts') }}" 
+                               class="nav-link {% if request.endpoint == 'manage_accounts' %}active{% endif %}">
+                                <i class="fas fa-users"></i>
+                                <span>Accounts</span>
+                            </a>
+                            <a href="{{ url_for('manage_personas') }}" 
+                               class="nav-link {% if request.endpoint == 'manage_personas' %}active{% endif %}">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Personas</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            COMMENTS
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('manual_comments') }}" 
+                               class="nav-link {% if request.endpoint == 'manual_comments' %}active{% endif %}">
+                                <i class="fas fa-comment"></i>
+                                <span>Manual Comments</span>
+                            </a>
+                            <a href="{{ url_for('ai_comments') }}" 
+                               class="nav-link {% if request.endpoint == 'ai_comments' %}active{% endif %}">
+                                <i class="fas fa-robot"></i>
+                                <span>AI Comments</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Feed Section -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            FEED
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('feed') }}" 
+                               class="nav-link {% if request.endpoint == 'feed' %}active{% endif %}">
+                                <i class="fas fa-rss"></i>
+                                <span>RSS</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tools -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            TOOLS
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('radar') }}" 
+                               class="nav-link {% if request.endpoint == 'radar' %}active{% endif %}">
+                                <i class="fas fa-satellite-dish"></i>
+                                <span>Radar</span>
+                            </a>
+                            <a href="{{ url_for('messages') }}" 
+                               class="nav-link {% if request.endpoint == 'messages' %}active{% endif %}">
+                                <i class="fas fa-envelope"></i>
+                                <span>Messages</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Monitoring & Analytics -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            MONITORING & ANALYTICS
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('analytics') }}" 
+                               class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Analytics</span>
+                            </a>
+                            <a href="{{ url_for('comment_history') }}" 
+                               class="nav-link {% if request.endpoint == 'comment_history' %}active{% endif %}">
+                                <i class="fas fa-history"></i>
+                                <span>History</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Scheduled Posts -->
+                    <div>
+                        <div class="text-sm text-gray-500 font-medium mb-4">
+                            SCHEDULED POSTS
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <a href="{{ url_for('scheduled_posts') }}" 
+                               class="nav-link {% if request.endpoint == 'scheduled_posts' %}active{% endif %}">
+                                <i class="fas fa-calendar"></i>
+                                <span>Scheduled Posts</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64">
+            <!-- Top Bar -->
+            <div class="bg-gray-900 h-16 fixed w-full z-10 ml-64">
+                <div class="flex items-center justify-end h-full px-6">
+                    <!-- Right Side Actions -->
+                    <div class="flex items-center space-x-4">
+                        <button class="text-gray-400 hover:text-white relative">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                3
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="pt-16 p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Flash Messages -->
+    <div id="notifications" class="fixed top-20 right-4 z-50 space-y-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="px-4 py-2 rounded-lg shadow-md {% if category == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Flash Message Auto-hide
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const flashMessages = document.querySelectorAll('.flash-message');
+                flashMessages.forEach(function(message) {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                });
+            }, 5000);
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 
